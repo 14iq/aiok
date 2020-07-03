@@ -1,22 +1,22 @@
 import api
-from bot import Bot
+
 
 
 class DotDict(dict):
-    """
-    a dictionary that supports dot notation 
-    as well as dictionary access notation 
-    """
+	"""
+	a dictionary that supports dot notation 
+	as well as dictionary access notation 
+	"""
 
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+	__getattr__ = dict.__getitem__
+	__setattr__ = dict.__setitem__
+	__delattr__ = dict.__delitem__
 
-    def __init__(self, dct):
-        for key, value in dct.items():
-            if hasattr(value, 'keys'):
-                value = DotDict(value)
-            self[key] = value
+	def __init__(self, dct):
+		for key, value in dct.items():
+			if hasattr(value, 'keys'):
+				value = DotDict(value)
+			self[key] = value
 
 
 
@@ -31,10 +31,6 @@ class BotLongpoll:
 		self.url = None
 		self.key = None
 		self.server = None
-
-
-		if not isinstance(bot, Bot):
-			raise TypeError(f"Argument 'bot' must be an instance of Bot, not '{type(bot).__name__}'")
 
 
 	async def update_longpoll_server(self, update_ts=True):
@@ -61,6 +57,18 @@ class BotLongpoll:
 		}
 
 		response = await api.make_request(self.bot.session, data, url=self.url)
-		self.ts = response['ts'] # skip last update to this
 
-		return response
+		if not 'failed' in response:
+			self.ts = response['ts'] # skip last update to this
+
+			return response
+
+
+		elif response['failed'] == 1:
+			self.ts = response['ts']
+
+		elif response['failed'] == 2:
+			self.update_longpoll_server(update_ts=False)
+
+		elif response['failed'] == 3:
+			self.update_longpoll_server()
