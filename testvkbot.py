@@ -1,5 +1,7 @@
 from bot import Bot
 from dispatcher import Dispatcher
+from utils import State
+from filters import State
 import executor
 
 # нельзя забыть врубить longpoll в группе
@@ -13,14 +15,17 @@ bot = Bot(token, group_id)
 dp = Dispatcher(bot)
 
 
-@dp.handler()
-async def lol(obj):
-	print(obj)
+sum_state = State()
 
 
-@dp.message_handler()
+@dp.handler(types='message_typing_state')
+async def lol(update):
+	await bot.messages_send(update.object.from_id, 'хандлинг печатанья')
+
+
+@dp.message_handler(lambda mes: mes.text == 'lol')
 async def echo(message):
-	await bot.messages_send(message.peer_id, message.text)
+	await bot.messages_send(message.peer_id, f'{message.text} + fl[afs[fsa')
 
 
 if __name__ == '__main__':

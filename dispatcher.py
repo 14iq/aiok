@@ -1,8 +1,27 @@
 from typing import Optional, Iterable
 from dataclasses import dataclass
 
+from filters import TypesFilter, CustomFilter
 from longpoll import BotLongpoll
 from bot import Bot
+
+
+
+class DotDict(dict):
+	"""
+	a dictionary that supports dot notation 
+	as well as dictionary access notation 
+	"""
+
+	__getattr__ = dict.__getitem__
+	__setattr__ = dict.__setitem__
+	__delattr__ = dict.__delitem__
+
+	def __init__(self, dct):
+		for key, value in dct.items():
+			if hasattr(value, 'keys'):
+				value = DotDict(value)
+			self[key] = value
 
 
 @dataclass
@@ -18,31 +37,44 @@ class Dispatcher:
 
 		self._polling = True
 
-		self.obj_handlers = Handler()
+		self.update_handlers = Handler()
 		self.message_handlers = Handler()
 
 		if not isinstance(bot, Bot):
 			raise TypeError(f"Argument 'bot' must be an instance of Bot, not '{type(bot).__name__}'")
 
 
-	def handler(self):
+	def prepare_filters(self, *args, types=None):
+		filters = []
+		if types:
+			filters.append(FilterObj(TypesFilter(types)))
+
+		for filter_ in args:
+			filters.append(FilterObj(CustomFilter(filter_)))
+
+		return filters
+
+
+	def handler(self, *custom_filters, types=None):
 		"""
 		def func(messsage_obj): - return this decorator to the func
 		"""
 		def decorator(func):
-			self.obj_handlers.register(func)
+			filters_set = self.prepare_filters(*custom_filters, types=types)
+			self.update_handlers.register(func, filters_set)
 			
 			return func
 
 		return decorator
 
 
-	def message_handler(self):
+	def message_handler(self, *custom_filters):
 		"""
 		def func(messsage_obj): - return this decorator to the func
 		"""
 		def decorator(func):
-			self.message_handlers.register(func)
+			filters_set = self.prepare_filters(*custom_filters)
+			self.message_handlers.register(func, filters_set)
 			
 			return func
 
@@ -59,8 +91,8 @@ class Dispatcher:
 				response = await self.longpoll.check()
 
 				if response:
-					for update in response.updates:
-						await self.notify_update(update)
+					for update in response['updates']:
+						await self.notify_update(DotDict(update))
 
 			except KeyboardInterrupt:
 				await bot.close()
@@ -68,9 +100,9 @@ class Dispatcher:
 
 
 	async def notify_update(self, update):
-		self.obj_handlers.notify(update.object)
-		if update.type == 'message.new':
-			self.message_handlers.notify(update.object.message)
+		await self.update_handlers.notify(update)
+		if update.type == 'message_new':
+			await self.message_handlers.notify(update.object.message)
 
 
 
@@ -84,9 +116,20 @@ class Handler:
 		self.handlers.append(record)
 
 
+	def check_filters(self, filters: Optional[Iterable[FilterObj]], args):
+		if filters:
+			for filter_obj in filters:
+				if not filter_obj.filter.check(args):
+					return False
+		return True
+
+
+
 	async def notify(self, args):
 		for handler_obj in self.handlers:
-			await handler_obj.func(args)
+			if self.check_filters(handler_obj.filters, args):
+				await handler_obj.func(args)
+				return
 			
 
 	@dataclass

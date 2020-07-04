@@ -2,24 +2,6 @@ import api
 
 
 
-class DotDict(dict):
-	"""
-	a dictionary that supports dot notation 
-	as well as dictionary access notation 
-	"""
-
-	__getattr__ = dict.__getitem__
-	__setattr__ = dict.__setitem__
-	__delattr__ = dict.__delitem__
-
-	def __init__(self, dct):
-		for key, value in dct.items():
-			if hasattr(value, 'keys'):
-				value = DotDict(value)
-			self[key] = value
-
-
-
 class BotLongpoll:
 	def __init__(self, bot, mode: int=2, wait: int=25):
 		self.bot: Bot = bot
