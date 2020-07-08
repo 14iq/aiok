@@ -2,11 +2,11 @@ import inspect
 from typing import Optional, Iterable
 from dataclasses import dataclass
 
-from storage import MemoryDataStorage, StateContext
-from mixins import ContextVarMixin
-from filters import TypesFilter, CustomFilter, StatesFilter, CommandFilter
-from longpoll import BotLongpoll
-from bot import Bot
+from .storage import MemoryDataStorage, StateContext
+from ..mixins import ContextVarMixin
+from ..filters import TypesFilter, CustomFilter, StatesFilter, CommandFilter
+from ..bot import Bot, BotLongpoll
+
 
 # похуй удалю патом
 class Peer_id(ContextVarMixin):

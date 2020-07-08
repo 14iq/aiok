@@ -1,3 +1,12 @@
+class BaseFilter:
+	async def check(self, *args):
+		# this method must be overridden.
+		pass
+
+	async def __call__(self, *args):
+		return await self.check(*args)
+
+
 class TypesFilter(BaseFilter):
 	def __init__(self, types):
 		if isinstance(types, str):
@@ -9,12 +18,23 @@ class TypesFilter(BaseFilter):
 		return update.type in self.types
 
 
+class CommandFilter(BaseFilter):
+	def __init__(self, commands):
+		if isinstance(commands, str):
+			commands = (commands, )
+
+		self.commands = commands
+
+	async def check(self, *args):
+		pass
+
+
 class CustomFilter(BaseFilter):
 	def __init__(self, custom_filter):
 		self.filter_ = custom_filter
 
-	async def check(self, args):
-		return self.filter_(args)
+	async def check(self, *args):
+		return self.filter_(*args)
 
 
 class StatesFilter(BaseFilter):
@@ -33,12 +53,3 @@ class StatesFilter(BaseFilter):
 		state = await self.dispatcher.storage.get_state(message.peer_id)
 		if state in self.states:
 			return {'state': self.dispatcher.current_state()}
-
-
-class BaseFilter:
-	async def check(self, *args):
-		# this method must be overridden.
-		pass
-
-	def __call__(self, *args):
-		return await self.check(*args)

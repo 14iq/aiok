@@ -1,7 +1,8 @@
-from .filters import TypesFilter, CustomFilter, StatesFilter
+from .filters import TypesFilter, CustomFilter, CommandFilter, StatesFilter
 
 __all__ = [
 	'TypesFilter',
 	'CustomFilter',
+	'CommandFilter',
 	'StatesFilter',
 	]

@@ -3,7 +3,7 @@ from random import randint
 
 import aiohttp
 
-import api
+from . import api
 
 
 def get_random_id():
