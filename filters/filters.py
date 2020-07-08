@@ -1,28 +1,44 @@
-from .state import State
-
-
-class TypesFilter:
+class TypesFilter(BaseFilter):
 	def __init__(self, types):
 		if isinstance(types, str):
 			types = (types, )
 
 		self.types = types
 
-	def check(self, update):
+	async def check(self, update):
 		return update.type in self.types
 
 
-class CustomFilter:
+class CustomFilter(BaseFilter):
 	def __init__(self, custom_filter):
 		self.filter_ = custom_filter
 
-	def check(self, args):
+	async def check(self, args):
 		return self.filter_(args)
 
 
-class StateFilter:
-	def __init__(self, state: State):
-		self.state = state
+class StatesFilter(BaseFilter):
+	def __init__(self, dispatcher, states):
+		self.dispatcher = dispatcher
 
-	def check(self, current_state: State):
-		return self.state is current_state
+		self.states = states
+		if not isinstance(states, (list, set, tuple, frozenset)) or states is None:
+			self.states = (states, )
+
+
+	async def check(self, message):
+		if '*' in self.states:
+			return {'state': self.dispatcher.current_state()}
+
+		state = await self.dispatcher.storage.get_state(message.peer_id)
+		if state in self.states:
+			return {'state': self.dispatcher.current_state()}
+
+
+class BaseFilter:
+	async def check(self, *args):
+		# this method must be overridden.
+		pass
+
+	def __call__(self, *args):
+		return await self.check(*args)

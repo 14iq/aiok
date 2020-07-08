@@ -1,9 +1,7 @@
-from .filters import TypesFilter, CustomFilter, StateFilter
-from .state import State
+from .filters import TypesFilter, CustomFilter, StatesFilter
 
 __all__ = [
 	'TypesFilter',
 	'CustomFilter',
-	'StateFilter',
-	'State',
+	'StatesFilter',
 	]

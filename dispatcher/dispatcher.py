@@ -1,9 +1,16 @@
+import inspect
 from typing import Optional, Iterable
 from dataclasses import dataclass
 
-from filters import TypesFilter, CustomFilter
+from storage import MemoryDataStorage, StateContext
+from mixins import ContextVarMixin
+from filters import TypesFilter, CustomFilter, StatesFilter, CommandFilter
 from longpoll import BotLongpoll
 from bot import Bot
+
+# похуй удалю патом
+class Peer_id(ContextVarMixin):
+ 	pass
 
 
 
@@ -29,13 +36,16 @@ class FilterObj:
 	filter: callable
 
 
-class Dispatcher:
-	def __init__(self, bot, loop=None):
+class Dispatcher(ContextVarMixin):
+	def __init__(self, bot, loop=None, store_data=False):
 		self.bot = bot
 		self.loop = loop
 		self.longpoll: BotLongpoll = None
 
 		self._polling = True
+
+		if store_data:
+			self.storage = MemoryDataStorage()
 
 		self.update_handlers = Handler()
 		self.message_handlers = Handler()
@@ -43,14 +53,24 @@ class Dispatcher:
 		if not isinstance(bot, Bot):
 			raise TypeError(f"Argument 'bot' must be an instance of Bot, not '{type(bot).__name__}'")
 
+		
+	def current_state(self):
+		return StateContext(self.storage, Peer_id.get_current())
 
-	def prepare_filters(self, *args, types=None):
+
+	def prepare_filters(self, *args, types=None, state=None, commands=None):
 		filters = []
 		if types:
 			filters.append(FilterObj(TypesFilter(types)))
 
-		for filter_ in args:
-			filters.append(FilterObj(CustomFilter(filter_)))
+		if state:
+			filters.append(FilterObj(StatesFilter(self, state)))
+
+		if commands:
+			filters.append(FilterObj(CommandFilter(commands))) 
+
+		if args:
+			filters.extend(args)
 
 		return filters
 
@@ -68,12 +88,13 @@ class Dispatcher:
 		return decorator
 
 
-	def message_handler(self, *custom_filters):
+	def message_handler(self, *custom_filters, state=None, commands=None):
 		"""
 		def func(messsage_obj): - return this decorator to the func
 		"""
 		def decorator(func):
-			filters_set = self.prepare_filters(*custom_filters)
+			filters_set = self.prepare_filters(*custom_filters,
+				state=state, commands=commands)
 			self.message_handlers.register(func, filters_set)
 			
 			return func
@@ -102,8 +123,14 @@ class Dispatcher:
 	async def notify_update(self, update):
 		await self.update_handlers.notify(update)
 		if update.type == 'message_new':
+			Peer_id.set_current(update.object.message.peer_id)
 			await self.message_handlers.notify(update.object.message)
 
+
+def retrive_spec(spec: inspect.FullArgSpec, kwargs: dict):
+	if isinstance(kwargs, dict):
+		return {key: val for key, val in kwargs.items() if key in spec.args}
+	return {}
 
 
 class Handler:
@@ -112,28 +139,38 @@ class Handler:
 
 
 	def register(self, func, filters=None):
-		record = Handler.HandlerObject(func=func, filters=filters)
+		spec = inspect.getfullargspec(func)
+		record = Handler.HandlerObject(func=func, spec=spec, filters=filters)
 		self.handlers.append(record)
 
 
-	def check_filters(self, filters: Optional[Iterable[FilterObj]], args):
+	async def check_filters(self, filters: Optional[Iterable[FilterObj]], *args):
 		if filters:
+			data = {}
 			for filter_obj in filters:
-				if not filter_obj.filter.check(args):
-					return False
+				check = await filter_obj.filter(*args)
+				if not check:
+					return
+				if isinstance(check, dict):
+					data.update(check)
+
+			if data:
+				return data
 		return True
 
 
-
-	async def notify(self, args):
+	async def notify(self, *args):
 		for handler_obj in self.handlers:
-			if self.check_filters(handler_obj.filters, args):
-				await handler_obj.func(args)
+			filtered_result = await self.check_filters(handler_obj.filters, *args)
+			if filtered_result:
+				additionally = retrive_spec(handler_obj.spec, filtered_result)
+				await handler_obj.func(*args, **additionally)
 				return
 			
 
 	@dataclass
 	class HandlerObject:
 		func: callable
+		spec: inspect.FullArgSpec
 		filters: Optional[Iterable[FilterObj]] = None
 		
