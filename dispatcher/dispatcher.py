@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 from .storage import MemoryDataStorage, StateContext
 from ..mixins import ContextVarMixin
-from ..filters import TypesFilter, CustomFilter, StatesFilter, CommandFilter
+from ..filters import FFactory, TypesFilter, StatesFilter, \
+	CommandFilter, Text
 from ..bot import Bot, BotLongpoll
 
 
@@ -42,6 +43,11 @@ class Dispatcher(ContextVarMixin):
 		self.loop = loop
 		self.longpoll: BotLongpoll = None
 
+		if not isinstance(bot, Bot):
+			raise TypeError(f"Argument 'bot' must be an instance of Bot, not '{type(bot).__name__}'")
+
+		self.filters_factory = FFactory(self)
+
 		self._polling = True
 
 		if store_data:
@@ -50,37 +56,30 @@ class Dispatcher(ContextVarMixin):
 		self.update_handlers = Handler()
 		self.message_handlers = Handler()
 
-		if not isinstance(bot, Bot):
-			raise TypeError(f"Argument 'bot' must be an instance of Bot, not '{type(bot).__name__}'")
+		self._setup_filters()
+
 
 		
+	def _setup_filters(self):
+		self.filters_factory.bind(StatesFilter, event_handlers=[
+			self.message_handlers,
+			])
+
+		self.filters_factory.bind(Text, event_handlers=[
+			self.message_handlers,
+			])
+
+
 	def current_state(self):
 		return StateContext(self.storage, Peer_id.get_current())
 
 
-	def prepare_filters(self, *args, types=None, state=None, commands=None):
-		filters = []
-		if types:
-			filters.append(FilterObj(TypesFilter(types)))
-
-		if state:
-			filters.append(FilterObj(StatesFilter(self, state)))
-
-		if commands:
-			filters.append(FilterObj(CommandFilter(commands))) 
-
-		if args:
-			filters.extend(args)
-
-		return filters
-
-
-	def handler(self, *custom_filters, types=None):
-		"""
-		def func(messsage_obj): - return this decorator to the func
-		"""
+	def handler(self, *custom_filters, types=None, **kwargs):
 		def decorator(func):
-			filters_set = self.prepare_filters(*custom_filters, types=types)
+			filters_set = self.filters_factory.resolve(self.update_handlers,
+				*custom_filters,
+				types=types,
+				**kwargs,)
 			self.update_handlers.register(func, filters_set)
 			
 			return func
@@ -88,13 +87,13 @@ class Dispatcher(ContextVarMixin):
 		return decorator
 
 
-	def message_handler(self, *custom_filters, state=None, commands=None):
-		"""
-		def func(messsage_obj): - return this decorator to the func
-		"""
+	def message_handler(self, *custom_filters, state=None, commands=None, **kwargs):
 		def decorator(func):
-			filters_set = self.prepare_filters(*custom_filters,
-				state=state, commands=commands)
+			filters_set = self.filters_factory.resolve(self.message_handlers,
+				*custom_filters,
+				state=state,
+				commands=commands,
+				**kwargs,)
 			self.message_handlers.register(func, filters_set)
 			
 			return func
@@ -106,7 +105,7 @@ class Dispatcher(ContextVarMixin):
 		self.bot.session
 		self.longpoll = BotLongpoll(self.bot)
 
-		print('polling is started')
+		print('[INFO] Start polling')
 		while self._polling:
 			try:
 				response = await self.longpoll.check()
@@ -137,9 +136,16 @@ class Handler:
 	def __init__(self):
 		self.handlers = []
 
+	def _prepare_filters(self, filters: Iterable[callable]):
+		data = []
+		for filter_ in filters:
+			data.append(FilterObj(filter_))
+
+		return data
 
 	def register(self, func, filters=None):
 		spec = inspect.getfullargspec(func)
+		filters = self._prepare_filters(filters)
 		record = Handler.HandlerObject(func=func, spec=spec, filters=filters)
 		self.handlers.append(record)
 

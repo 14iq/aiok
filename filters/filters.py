@@ -1,55 +1,44 @@
+import inspect
+
+
 class BaseFilter:
+	@classmethod
+	def validate(cls, filters_config):
+		"""
+		this method must be overridden.
+
+		"""
+		pass
+
 	async def check(self, *args):
-		# this method must be overridden.
+		"""
+		this method must be overridden.
+
+		"""
 		pass
 
 	async def __call__(self, *args):
 		return await self.check(*args)
 
 
-class TypesFilter(BaseFilter):
-	def __init__(self, types):
-		if isinstance(types, str):
-			types = (types, )
+class FilterRecord:
+	def __init__(self, filter_cls, handlers):
+		self.filter_ = filter_cls
+		self.handlers = handlers
 
-		self.types = types
+		self.validator = filter_cls.validate
 
-	async def check(self, update):
-		return update.type in self.types
+	def _check_event_handler(self, event_handler):
+		return event_handler in self.handlers
+	
+	def resolve(self, dispathcer, event_handler, filters_config):
+		if not self._check_event_handler(event_handler):
+			return
 
+		config = self.validator(filters_config)
+		if config:
+			if 'dispatcher' not in config:
+				if 'dispatcher' in inspect.getfullargspec(self.filter_).args:
+					config['dispatcher'] = dispatcher
 
-class CommandFilter(BaseFilter):
-	def __init__(self, commands):
-		if isinstance(commands, str):
-			commands = (commands, )
-
-		self.commands = commands
-
-	async def check(self, *args):
-		pass
-
-
-class CustomFilter(BaseFilter):
-	def __init__(self, custom_filter):
-		self.filter_ = custom_filter
-
-	async def check(self, *args):
-		return self.filter_(*args)
-
-
-class StatesFilter(BaseFilter):
-	def __init__(self, dispatcher, states):
-		self.dispatcher = dispatcher
-
-		self.states = states
-		if not isinstance(states, (list, set, tuple, frozenset)) or states is None:
-			self.states = (states, )
-
-
-	async def check(self, message):
-		if '*' in self.states:
-			return {'state': self.dispatcher.current_state()}
-
-		state = await self.dispatcher.storage.get_state(message.peer_id)
-		if state in self.states:
-			return {'state': self.dispatcher.current_state()}
+			return self.filter_(**config)

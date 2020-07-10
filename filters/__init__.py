@@ -1,8 +1,11 @@
-from .filters import TypesFilter, CustomFilter, CommandFilter, StatesFilter
+from .factory import FFactory
+from .bildin import TypesFilter, CommandFilter, StatesFilter, \
+	Text
 
 __all__ = [
+	'FFactory',
 	'TypesFilter',
-	'CustomFilter',
 	'CommandFilter',
 	'StatesFilter',
+	'Text',
 	]
