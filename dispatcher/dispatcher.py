@@ -4,8 +4,7 @@ from dataclasses import dataclass
 
 from .storage import MemoryDataStorage, StateContext
 from ..mixins import ContextVarMixin
-from ..filters import FFactory, TypesFilter, StatesFilter, \
-	CommandFilter, Text
+from ..filters import FFactory, TypesFilter, StatesFilter, Text
 from ..bot import Bot, BotLongpoll
 
 
@@ -43,6 +42,8 @@ class Dispatcher(ContextVarMixin):
 		self.loop = loop
 		self.longpoll: BotLongpoll = None
 
+		self.storage = None
+
 		if not isinstance(bot, Bot):
 			raise TypeError(f"Argument 'bot' must be an instance of Bot, not '{type(bot).__name__}'")
 
@@ -50,18 +51,22 @@ class Dispatcher(ContextVarMixin):
 
 		self._polling = True
 
-		if store_data:
-			self.storage = MemoryDataStorage()
-
 		self.update_handlers = Handler()
 		self.message_handlers = Handler()
 
-		self._setup_filters()
+		if store_data:
+			self._setup_storage()
 
+		self._setup_filters()
 
 		
 	def _setup_filters(self):
+		self.filters_factory.bind(TypesFilter, event_handlers=[
+			self.update_handlers,
+			])
+
 		self.filters_factory.bind(StatesFilter, event_handlers=[
+			self.update_handlers,
 			self.message_handlers,
 			])
 
@@ -70,7 +75,13 @@ class Dispatcher(ContextVarMixin):
 			])
 
 
+	def _setup_storage(self):
+		self.storage = MemoryDataStorage()
+
+
 	def current_state(self):
+		if not self.storage:
+			raise ValueError('Cannot get state, storage is not defined')
 		return StateContext(self.storage, Peer_id.get_current())
 
 

@@ -1,17 +1,14 @@
-from typing import Dict, Optional
+async def make_server_request(session, server_url: str, data: dict, **kwargs):
+	async with session.post(server_url, data=data, **kwargs) as response:
+		return await response.json()
 
 
-
-async def make_request(session, data: Optional[Dict],
-	url: str=None, method: str=None, **kwargs):
-
-	if method and not url:
-		url = f'https://api.vk.com/method/{method}'
+async def make_request(session, method: str, data: dict, **kwargs):
+	
+	url = f'https://api.vk.com/method/{method}'
 
 	async with session.post(url, data=data, **kwargs) as response:
-		json = await response.json()
-
-	return json
+		return await response.json()
 
 
 # there is all vk constants

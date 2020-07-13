@@ -1,6 +1,5 @@
 from .factory import FFactory
-from .bildin import TypesFilter, CommandFilter, StatesFilter, \
-	Text
+from .bildin import TypesFilter, StatesFilter, Text
 
 __all__ = [
 	'FFactory',

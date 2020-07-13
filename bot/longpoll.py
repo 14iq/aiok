@@ -10,7 +10,6 @@ class BotLongpoll:
 		self.mode = mode
 
 		self.ts = None
-		self.url = None
 		self.key = None
 		self.server = None
 
@@ -18,8 +17,11 @@ class BotLongpoll:
 	async def update_longpoll_server(self, update_ts=True):
 		response = await self.bot.get_long_poll_server()
 
+		if 'error' in response:
+			raise ValueError(f'register longpoll server error: {response["error"]}')
+
 		self.key = response['response']['key']
-		self.url = response['response']['server']
+		self.server = response['response']['server']
 
 		if update_ts:
 			self.ts = response['response']['ts']
@@ -29,7 +31,7 @@ class BotLongpoll:
 		if not self.key:
 			await self.update_longpoll_server()
 
-		data = {
+		payload = {
 			'act': 'a_check',
 			'key': self.key,
 			'ts': self.ts,
@@ -38,7 +40,7 @@ class BotLongpoll:
 			'version': 3
 		}
 
-		response = await api.make_request(self.bot.session, data, url=self.url)
+		response = await api.make_server_request(self.bot.session, self.server, payload)
 
 		if not 'failed' in response:
 			self.ts = response['ts'] # skip last update to this
@@ -50,7 +52,7 @@ class BotLongpoll:
 			self.ts = response['ts']
 
 		elif response['failed'] == 2:
-			self.update_longpoll_server(update_ts=False)
+			await self.update_longpoll_server(update_ts=False)
 
 		elif response['failed'] == 3:
-			self.update_longpoll_server()
+			await self.update_longpoll_server()

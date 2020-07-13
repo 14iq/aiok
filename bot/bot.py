@@ -1,4 +1,3 @@
-from typing import Dict, Optional
 from random import randint
 
 import aiohttp
@@ -8,6 +7,14 @@ from . import api
 
 def get_random_id():
 	return randint(-9223372036854775807, 9223372036854775807)
+
+PAYLOAD_FILTER = ['self']
+
+def prepare_payload(**kwargs):
+	return {key: val for key, val in kwargs.items() if
+		key not in PAYLOAD_FILTER
+		and val is not None
+		and not key.startswith('_')}
 
 
 class Bot:
@@ -32,22 +39,22 @@ class Bot:
 		await self.session.close()
 
 
-	async def request(self, method: str, data: Optional[Dict]):
-		data['access_token'] = self.token
-		data['v'] = '5.115'
+	async def request(self, method: str, payload: dict):
+		payload['access_token'] = self.token
+		payload['v'] = '5.120'
 
-		return await api.make_request(self._session, data, method=method, proxy=self.proxy)
+		return await api.make_request(self._session, method, payload, proxy=self.proxy)
 
 
 	async def messages_send(self, peer_id: int, message: str):
-		data = locals()
-		data['random_id'] = get_random_id()
+		random_id = get_random_id()
 
-		return await self.request(api.Methods.messagesSend, data=data)
+		payload = prepare_payload(**locals())
+
+		return await self.request(api.Methods.messagesSend, payload)
 
 
 	async def get_long_poll_server(self):
-		return await self.request(
-			api.Methods.getLongPollServer,
-			data={'group_id': self.group_id},
-			)
+		payload = {'group_id': self.group_id}
+		
+		return await self.request(api.Methods.getLongPollServer, payload)

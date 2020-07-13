@@ -20,17 +20,6 @@ class TypesFilter(BaseFilter):
 		return update.type in self.types
 
 
-class CommandFilter(BaseFilter):
-	def __init__(self, commands):
-		if isinstance(commands, str):
-			commands = (commands, )
-
-		self.commands = commands
-
-	async def check(self, *args):
-		pass
-
-
 class StatesFilter(BaseFilter):
 	def __init__(self, dispatcher, states):
 		self.dispatcher = dispatcher
@@ -43,7 +32,7 @@ class StatesFilter(BaseFilter):
 	def validate(cls, filters_config):
 		config = {}
 		if 'state' in filters_config:
-			config['state'] = filters_config.pop('state')
+			config['states'] = filters_config.pop('state')
 
 		return config
 

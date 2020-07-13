@@ -31,7 +31,7 @@ class FilterRecord:
 	def _check_event_handler(self, event_handler):
 		return event_handler in self.handlers
 	
-	def resolve(self, dispathcer, event_handler, filters_config):
+	def resolve(self, dispatcher, event_handler, filters_config):
 		if not self._check_event_handler(event_handler):
 			return
 
