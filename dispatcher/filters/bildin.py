@@ -1,25 +1,6 @@
 from .filters import BaseFilter
 
 
-class TypesFilter(BaseFilter):
-	def __init__(self, types):
-		if isinstance(types, str):
-			types = (types, )
-
-		self.types = types
-
-	@classmethod
-	def validate(cls, filters_config):
-		config = {}
-		if 'types' in filters_config:
-			config['types'] = filters_config.pop('types')
-
-		return config
-
-	async def check(self, update):
-		return update.type in self.types
-
-
 class StatesFilter(BaseFilter):
 	def __init__(self, dispatcher, states):
 		self.dispatcher = dispatcher

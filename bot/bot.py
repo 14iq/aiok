@@ -46,7 +46,7 @@ class Bot:
 		return await api.make_request(self._session, method, payload, proxy=self.proxy)
 
 
-	async def messages_send(self, peer_id: int, message: str):
+	async def messages_send(self, peer_id: int, message: str=None, sticker_id: int=None):
 		random_id = get_random_id()
 
 		payload = prepare_payload(**locals())
