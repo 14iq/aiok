@@ -1,7 +1,7 @@
 import logging
 
-from ..mixins import ContextVarMixin
 from ..bot import Bot, BotLongpoll
+from ..utils.mixins import ContextVarMixin
 from .storage import MemoryDataStorage, StateContext, EmptyStorage
 from .filters import FFactory, StatesFilter, Text
 from .handler import Handler
