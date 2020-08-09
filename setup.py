@@ -11,7 +11,7 @@ setup(
   download_url = 'https://github.com/14iq/aiok/archive/v_01.tar.gz',
   keywords = ['SOME', 'MEANINGFULL', 'KEYWORDS'],
   install_requires=[
-          'aiohttp',
+        'aiohttp',
       ],
   classifiers=[
     'Development Status :: 3 - Alpha',
