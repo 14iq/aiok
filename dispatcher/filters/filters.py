@@ -7,10 +7,18 @@ from ..handler import FilterObj
 def _prepare_filters(filters: Iterable[callable]):
 	data = []
 	for filter_ in filters:
-		if inspect.isawaitable(filter_):
-			data.append(FilterObj(filter_, True))
+
+		#import pdb; pdb.set_trace()
+
+		if not callable(filter_):
+			raise TypeError('Filter must be callable!')
+
+		if inspect.isawaitable(filter_) \
+            	or inspect.iscoroutinefunction(filter_) \
+            	or isinstance(filter_, BaseFilter):
+			data.append(FilterObj(filter_=filter_, is_async=True))
 		else:
-			data.append(FilterObj(filter_, False))
+			data.append(FilterObj(filter_=filter_, is_async=False))
 
 	return data
 

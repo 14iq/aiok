@@ -6,7 +6,7 @@ from dataclasses import dataclass
 @dataclass
 class FilterObj:
 	filter_: callable
-	is_async: bool
+	is_async: bool = False
 
 
 def _retrive_spec(spec: inspect.FullArgSpec, kwargs: dict):

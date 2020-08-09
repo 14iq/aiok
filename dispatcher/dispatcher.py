@@ -84,7 +84,7 @@ class Dispatcher(ContextVarMixin):
 
 
 	def message_handler(self, *custom_filters, state=None, commands=None, **kwargs):
-		def decorator(func):
+		def wrapper(func):
 			filters_set = self.filters_factory.resolve(self.message_handlers,
 				*custom_filters,
 				state=state,
@@ -94,7 +94,7 @@ class Dispatcher(ContextVarMixin):
 			
 			return func
 
-		return decorator
+		return wrapper
 
 	async def notify_update(self, update):
 		if update.type == 'message_new':

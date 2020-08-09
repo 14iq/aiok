@@ -6,12 +6,12 @@ class BotLongpoll:
 	def __init__(self, bot, mode: int=2, wait: int=25):
 		self.bot: Bot = bot
 
+		self.key = None
+		self.ts = None
+		self.server = None
+
 		self.wait = wait
 		self.mode = mode
-
-		self.ts = None
-		self.key = None
-		self.server = None
 
 
 	async def update_longpoll_server(self, update_ts=True):
@@ -19,7 +19,7 @@ class BotLongpoll:
 
 		if 'error' in response:
 			raise ValueError(f'register longpoll server error: {response["error"]}')
-
+		
 		self.key = response['response']['key']
 		self.server = response['response']['server']
 
@@ -31,7 +31,7 @@ class BotLongpoll:
 		if not self.key:
 			await self.update_longpoll_server()
 
-		payload = {
+		pack = {
 			'act': 'a_check',
 			'key': self.key,
 			'ts': self.ts,
@@ -40,7 +40,7 @@ class BotLongpoll:
 			'version': 3
 		}
 
-		response = await api.make_server_request(self.bot.session, self.server, payload)
+		response = await api.make_server_request(self.bot.session, self.server, pack)
 
 		if not 'failed' in response:
 			self.ts = response['ts'] # skip last update to this

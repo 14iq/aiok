@@ -3,7 +3,7 @@ from random import randint
 import aiohttp
 
 from . import api
-
+from ..utils.mixins import ContextVarMixin
 
 def get_random_id():
 	return randint(-9223372036854775807, 9223372036854775807)
@@ -17,7 +17,7 @@ def prepare_payload(**kwargs):
 		and not key.startswith('_')}
 
 
-class Bot:
+class Bot(ContextVarMixin):
 	def __init__(self, token: str, group_id: int, proxy: str = None):
 		self.token = token
 		self.group_id = group_id
@@ -46,7 +46,7 @@ class Bot:
 		return await api.make_request(self._session, method, payload, proxy=self.proxy)
 
 
-	async def messages_send(self, peer_id: int, message: str=None, sticker_id: int=None):
+	async def messages_send(self, peer_id: int, message: str=None, sticker_id: int=None, keyboard=None):
 		random_id = get_random_id()
 
 		payload = prepare_payload(**locals())
